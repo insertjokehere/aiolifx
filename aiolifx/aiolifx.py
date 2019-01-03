@@ -775,6 +775,12 @@ class Light(Device):
         self.color_zones = None
         self.infrared_brightness = None
 
+    def create_endpoint(self, family=socket.AF_INET):
+        coro = self.loop.create_datagram_endpoint(
+            lambda: self, family=family, remote_addr=(self.ip_addr, self.port))
+
+        self.task = self.loop.create_task(coro)
+
     def get_power(self,callb=None):
         """Convenience method to request the power status from the device
 
@@ -1216,10 +1222,7 @@ class LifxDiscovery(aio.DatagramProtocol):
             light = Light(self.loop, mac_addr, remote_ip, remote_port, parent=self)
             self.lights[mac_addr] = light
 
-        coro = self.loop.create_datagram_endpoint(
-            lambda: light, family=family, remote_addr=(remote_ip, remote_port))
-
-        light.task = self.loop.create_task(coro)
+        light.create_endpoint(family)
 
     def discover(self):
         """Method to send a discovery message
